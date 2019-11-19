@@ -36,6 +36,8 @@ def get_client_stacking():
   outp_clientstack = re.search(r"_NET_CLIENT_LIST_STACKING.+?# (.+?)\n", outp_str)
   if outp_clientstack:
     ret = outp_clientstack.group(1).split(", ")
+    ## add leading zero to conform to wmctrl output (8-digit hex):
+    ret = [re.sub(r"0x", "0x0", i) for i in ret]
   else:
     warnings.warn("Client stacking not found in output from `xprop`.")
     ret = None
@@ -103,7 +105,6 @@ def get_wmctrl_data():
   return(dat_wmctrl)
 
 
-
 ## ========================================================================= ##
 ## main
 ## ========================================================================= ##
@@ -117,8 +118,22 @@ dat_wmctrl = get_wmctrl_data()
 ## get application type of active window id:
 app_type = dat_wmctrl[dat_wmctrl["win_id"] == win_id]["win_type"].values[0]
 
+## get client stacking:
+## as series? or keep as list?
+client_stack = get_client_stacking()
 
+## create data frame with client stack rank:
+dat_client_stack = pd.DataFrame(
+  data = {'win_id': client_stack, 
+          'active_rank': reversed(range(len(client_stack)))})
 
+## join to wmctrl data:
+dat_wmctrl = pd.merge(dat_wmctrl, dat_client_stack, left_on = "win_id", right_on = "win_id")
+
+## sort by active rank:
+dat_wmctrl = dat_wmctrl.sort_values(by = ['active_rank'])
+
+## remove active application from 
 ## [[here]]
 ## what next?
 ## * sort by client stacking
@@ -127,9 +142,6 @@ app_type = dat_wmctrl[dat_wmctrl["win_id"] == win_id]["win_type"].values[0]
 ## * close active window
 ## * focus the next remaining app, if there is any
 
-## get client stacking:
-## as series? or keep as list?
-# get_client_stacking()
 
 
 ## close active window:
