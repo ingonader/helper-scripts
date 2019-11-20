@@ -105,6 +105,42 @@ def get_wmctrl_data():
   return(dat_wmctrl)
 
 
+def get_active_windows(sort = True):
+  """
+  Gets currently open windows including a ranking of when they were last active
+  
+  Uses the `wmctrl` command line tool (with the `-lx` option) to list all 
+  currently open windows (IDs, names and some other data), and also the 
+  ranking of when those windows were last active (as obtained via `xprop`).
+  See also get_client_stacking() function.
+  note: function returns pandas dataframe without an index without any 
+  information (index only contains only an enumeration).
+  
+  Parameters:
+  boolean sort: whether or not the active window list (DataFrame) should
+    be sorted by the activity ranking (most recently active windows on top)
+  
+  Returns:
+  pandas dataframe: One row per currently open application window, with the
+    following columns: 
+    ['win_id', 'win_status', 'win_type', 'win_os', 'win_name', 'active_rank']
+  """
+  ## get wmctrl data:
+  dat_wmctrl = get_wmctrl_data()
+  ## get client stacking:
+  client_stack = get_client_stacking()
+  ## create data frame with client stack rank:
+  dat_client_stack = pd.DataFrame(
+    data = {'win_id': client_stack, 
+            'active_rank': reversed(range(len(client_stack)))})
+  ## join to wmctrl data:
+  dat_wmctrl = pd.merge(dat_wmctrl, dat_client_stack, left_on = "win_id", right_on = "win_id")
+  ## sort by active rank, if needed:
+  if sort == True:
+    dat_wmctrl = dat_wmctrl.sort_values(by = ['active_rank'])
+  return(dat_wmctrl)
+
+
 ## ========================================================================= ##
 ## main
 ## ========================================================================= ##
@@ -112,31 +148,16 @@ def get_wmctrl_data():
 ## get active window:
 win_id = get_active_window_id()
 
-## get wmctrl data:
-dat_wmctrl = get_wmctrl_data()
+## get active windows, sorted by recent activity:
+dat_wmctrl = get_active_windows(sort = True)
 
 ## get application type of active window id:
 win_type = dat_wmctrl[dat_wmctrl["win_id"] == win_id]["win_type"].values[0]
 
-## get client stacking:
-## as series? or keep as list?
-client_stack = get_client_stacking()
-
-## create data frame with client stack rank:
-dat_client_stack = pd.DataFrame(
-  data = {'win_id': client_stack, 
-          'active_rank': reversed(range(len(client_stack)))})
-
-## join to wmctrl data:
-dat_wmctrl = pd.merge(dat_wmctrl, dat_client_stack, left_on = "win_id", right_on = "win_id")
-
-## sort by active rank:
-dat_wmctrl = dat_wmctrl.sort_values(by = ['active_rank'])
-
 ## close active window:
 subprocess.run(["/usr/bin/wmctrl", "-c", ":ACTIVE:"])
 
-## remove active application from this list:
+## remove active application from window list:
 dat_wmctrl = dat_wmctrl[dat_wmctrl["win_id"] != win_id]
 
 ## find next remaining instance of active application:
