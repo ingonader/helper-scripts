@@ -116,7 +116,7 @@ win_id = get_active_window_id()
 dat_wmctrl = get_wmctrl_data()
 
 ## get application type of active window id:
-app_type = dat_wmctrl[dat_wmctrl["win_id"] == win_id]["win_type"].values[0]
+win_type = dat_wmctrl[dat_wmctrl["win_id"] == win_id]["win_type"].values[0]
 
 ## get client stacking:
 ## as series? or keep as list?
@@ -133,27 +133,19 @@ dat_wmctrl = pd.merge(dat_wmctrl, dat_client_stack, left_on = "win_id", right_on
 ## sort by active rank:
 dat_wmctrl = dat_wmctrl.sort_values(by = ['active_rank'])
 
-## remove active application from 
-## [[here]]
-## what next?
-## * sort by client stacking
-## * remove active app
-## * get all remaining apps of the same type
-## * close active window
-## * focus the next remaining app, if there is any
-
-
-
 ## close active window:
 subprocess.run(["/usr/bin/wmctrl", "-c", ":ACTIVE:"])
 
-## logging what is going on:
-f = open("/home/nai/bin/log.txt","w+")
-f.write(win_type + "\n")
+## remove active application from this list:
+dat_wmctrl = dat_wmctrl[dat_wmctrl["win_id"] != win_id]
 
-## focus last active window of that application (except the closed one):
-tmp = subprocess.run(["/home/nai/bin/focus.sh", win_type])
-f.write(str(tmp))
-f.close
+## find next remaining instance of active application:
+dat_wmctrl_active = dat_wmctrl[dat_wmctrl["win_type"] == win_type]
 
+## if there is one, focus it (e.g., wmctrl -i -a 0x00200007):
+if dat_wmctrl_active.shape[0] > 0:
+  next_window = dat_wmctrl_active[0:1]["win_id"].values[0]
+  outp_byte = subprocess.run(["wmctrl", "-i", "-a", next_window])
+  
 
+  
