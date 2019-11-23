@@ -81,9 +81,10 @@ def get_wmctrl_data():
   Parameters: None.
   
   Returns:
-  pandas dataframe: One row per currently open application window, with the
-    following columns: 
-    ['win_id', 'win_status', 'win_type', 'win_os', 'win_name']
+  pandas dataframe: One row per currently open application window, 
+    with the following columns: 
+    ['win_id', 'win_status', 'win_type', 'win_os', 'win_name', 
+    'application']
   """
   ## get window wmctrl output and convert to utf-8:
   wmctrl_byte = subprocess.check_output(["/usr/bin/wmctrl", "-lx"])
@@ -102,6 +103,9 @@ def get_wmctrl_data():
     sep = "\t", header = None, 
     names = ["win_id", "win_status", "win_type", "win_os", "win_name"],
     index_col = False)
+  
+  ## add application (derived from win_type):
+  dat_wmctrl["application"] = [i[1] for i in dat_wmctrl["win_type"].str.split(".")]
   return(dat_wmctrl)
 
 
@@ -153,7 +157,8 @@ if __name__ == "__main__":
   dat_wmctrl = get_active_windows(sort = True)
   
   ## get application type of active window id:
-  win_type = dat_wmctrl[dat_wmctrl["win_id"] == win_id]["win_type"].values[0]
+  active_application = dat_wmctrl[dat_wmctrl["win_id"] == win_id]\
+    ["application"].values[0]
   
   ## close active window:
   subprocess.run(["/usr/bin/wmctrl", "-c", ":ACTIVE:"])
@@ -162,7 +167,7 @@ if __name__ == "__main__":
   dat_wmctrl = dat_wmctrl[dat_wmctrl["win_id"] != win_id]
   
   ## find next remaining instance of active application:
-  dat_wmctrl_active = dat_wmctrl[dat_wmctrl["win_type"] == win_type]
+  dat_wmctrl_active = dat_wmctrl[dat_wmctrl["application"] == active_application]
   
   ## if there is one, focus it (e.g., wmctrl -i -a 0x00200007):
   if dat_wmctrl_active.shape[0] > 0:
