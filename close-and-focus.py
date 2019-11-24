@@ -8,12 +8,6 @@
 ## import packages
 ## ========================================================================= ##
 
-# import subprocess
-# import re
-# import pandas as pd
-# from io import StringIO
-# import warnings
-
 from linux_wmctrl_fnlib import *
 
 ## ========================================================================= ##
