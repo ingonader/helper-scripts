@@ -10,7 +10,6 @@
 import subprocess
 import re
 import pandas as pd
-from io import StringIO
 import warnings
 
 ## ========================================================================= ##
@@ -97,11 +96,26 @@ def get_wmctrl_data():
     string = wmctrl_str)
   
   ## parse results into pandas dataframe and return it:
-  dat_wmctrl = pd.read_csv(
-    StringIO(wmctrl_csv_str), 
-    sep = "\t", header = None, 
-    names = ["win_id", "win_status", "win_type", "win_os", "win_name"],
-    index_col = False)
+  TYPEDICT_WMCTRL = {
+    "win_id": str,
+    "win_status": int,
+    "win_type": str,
+    "win_os": str,
+    "win_name": str
+  }
+  ## without StringIO (takes ages to import):
+  dat_wmctrl = pd.DataFrame([x.split('\t') for x in wmctrl_csv_str.split('\n')])
+  dat_wmctrl.columns = ["win_id", "win_status", "win_type", "win_os", "win_name"]
+  dat_wmctrl = dat_wmctrl.dropna()
+  dat_wmctrl = dat_wmctrl.astype(TYPEDICT_WMCTRL)
+  dat_wmctrl = dat_wmctrl.astype(TYPEDICT_WMCTRL)
+  ## still not equal: dat_cmtrl.equals(df): nan vs. N/A
+
+  # dat_wmctrl = pd.read_csv(
+  #   StringIO(wmctrl_csv_str), 
+  #   sep = "\t", header = None, 
+  #   names = ["win_id", "win_status", "win_type", "win_os", "win_name"],
+  #   index_col = False)
   
   ## add application (derived from win_type):
   dat_wmctrl["application"] = [i[1] for i in dat_wmctrl["win_type"].str.split(".")]
